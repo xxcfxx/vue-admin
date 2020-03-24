@@ -83,7 +83,7 @@ import {
   validateVcode
 } from "@/utils/validate";
 import { reactive, ref, onMounted } from "@vue/composition-api";
-import { GetSms, Submit } from "@/api/login.js";
+import { GetSms, Register, Login } from "@/api/login.js";
 export default {
   name: "login",
   // setup(props, context) {
@@ -277,9 +277,9 @@ export default {
             module: model.value
           };
           if (model.value === "login") {
-            register(requestData);
-          } else {
             login(requestData);
+          } else {
+            register(requestData);
           }
         } else {
           console.log("error submit!!");
@@ -289,7 +289,7 @@ export default {
     };
 
     const register = requestData => {
-      Submit(requestData)
+      Register(requestData)
         .then(response => {
           let data = response.data;
           root.$message({
@@ -301,23 +301,28 @@ export default {
         })
         .catch(error => {
           console.log(error);
+          if (error.message == "当前注册的邮箱已存在！！") {
+            toggleMenu(menuTab[0]);
+            clearcountDown();
+          }
         });
     };
     const login = requestData => {
-      Submit(requestData)
+      root.$store
+        .dispatch("app/login", requestData)
         .then(response => {
+          console.log(response);
           let data = response.data;
           root.$message({
             message: data.message,
             type: "success"
           });
+          root.$router.push({
+            name: "Console"
+          });
         })
         .catch(error => {
           console.log(error);
-          if (error.message == "当前注册的邮箱已存在！！") {
-            toggleMenu(menuTab[0]);
-            clearcountDown();
-          }
         });
     };
     onMounted(() => {

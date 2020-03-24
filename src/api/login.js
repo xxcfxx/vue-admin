@@ -12,7 +12,16 @@ export function GetSms(data) {
   });
 }
 
-export function Submit(data) {
+export function Register(data) {
+  console.log(data);
+  return service.request({
+    method: "POST",
+    url: `/${data.module}/`,
+    data
+  });
+}
+
+export function Login(data) {
   console.log(data);
   return service.request({
     method: "POST",
