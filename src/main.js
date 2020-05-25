@@ -8,6 +8,8 @@ import ElementUI from "element-ui";
 import "element-ui/lib/theme-chalk/index.css";
 import "./icon"
 import "./router/permit"
+// import global from "./utils/global"
+// Vue.use(global)
 Vue.use(ElementUI);
 Vue.use(VueCompositionApi);
 // import 'normalize.css'

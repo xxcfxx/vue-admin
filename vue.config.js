@@ -47,11 +47,13 @@ module.exports = {
     // css预设器配置项
     loaderOptions: {
       scss: {
-        prependData: `@import "@/styles/main.scss";`
+        prependData: `@import "@/styles/main.scss";@import "@/styles/test.scss";`
       }
     },
     // 启用 CSS modules for all css / pre-processor files.
-    modules: false
+    //modules: false,
+    requireModuleExtension: true
+
   },
   // use thread-loader for babel & TS in production build
   // enabled by default if the machine has more than 1 cores
@@ -70,7 +72,7 @@ module.exports = {
     hotOnly: false,
     proxy: {
       "/devApi": {
-        // target: "http://www.web-jshtml.cn/dependenciesapi",
+        //target: "http://www.web-jshtml.cn/dependenciesapi",
         target: "http://www.web-jshtml.cn/productapi/token",
         changeOrigin: true,
         pathRewrite: {
