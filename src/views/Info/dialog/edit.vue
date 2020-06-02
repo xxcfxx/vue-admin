@@ -1,7 +1,7 @@
 <template>
   <!--信息弹框-->
   <el-dialog
-    title="新增"
+    title="修改"
     :visible.sync="data.dialogVisible"
     @close="close"
     @opened="openDialog"
@@ -32,10 +32,10 @@
   </el-dialog>
 </template>
 <script>
-import { AddInfo, GetInfoList } from "@/api/news";
+import { EditInfo, GetInfoList } from "@/api/news";
 import { ref, reactive, watch } from "@vue/composition-api";
 export default {
-  name: "DialogInfo",
+  name: "DialogEditInfo",
   //从父组件接收到子组件
   props: {
     flag: {
@@ -46,13 +46,9 @@ export default {
       type: Array,
       default: () => []
     },
-    pageNumber: {
-      type: Number,
-      default: 10
-    },
-    pageSize: {
-      type: Number,
-      default: 1
+    infoId: {
+      type: String,
+      default: ""
     }
   },
 
@@ -66,43 +62,56 @@ export default {
         title: "",
         content: ""
       },
-      categoryOptions: [],
-      page: {
-        pageNumber: 10,
-        pageSize: 1
-      }
+      categoryOptions: []
     });
     /**监听dialog的变化 */
     watch(() => {
       data.dialogVisible = props.flag;
-      data.page.pageNumber = props.pageNumber;
-      data.page.pageSize = props.pageSize;
     });
     const close = () => {
       data.dialogVisible = false;
       resetForm("InfoForm");
-      emit("update:flag", false);
+      emit("update:flag", false); //更新父组件dialog的状态
     };
     const openDialog = () => {
       data.categoryOptions = props.category;
+      let requestData = {
+        id: props.infoId,
+        pageNumber: 1,
+        pageSize: 10
+      };
+      getInfo(requestData);
+    };
+    const getInfo = requestData => {
+      GetInfoList(requestData)
+        .then(response => {
+          let infoData = response.data.data.data[0];
+          data.form = {
+            category: infoData.categoryId,
+            title: infoData.title,
+            content: infoData.content
+          };
+        })
+        .catch(error => {});
     };
     const submit = () => {
       const requestData = {
-        category: data.form.category,
+        id: props.infoId,
+        categoryId: data.form.category,
         title: data.form.title,
-        content: data.form.content
+        content: data.form.content,
+        imgUrl: ""
       };
       data.submit_loading = true;
-      /**添加新闻 */
-      AddInfo(requestData)
+      /**修改信息 */
+      EditInfo(requestData)
         .then(response => {
           root.$message({
             message: response.data.message,
             type: "success"
           });
           data.submit_loading = false;
-          resetForm("InfoForm");
-          emit("getList");
+          emit("getList"); //回调  重新调用获取信息列表函数
         })
         .catch(error => {
           data.submit_loading = false;
@@ -120,39 +129,6 @@ export default {
       resetForm
     };
   }
-
-  //vue 2.0写法
-  // data() {
-  //   return {
-  //     dialogVisible: true,
-  //     form: {
-  //       name: "",
-  //       region: "",
-  //       date1: "",
-  //       date2: "",
-  //       delivery: false,
-  //       type: [],
-  //       resource: "",
-  //       desc: ""
-  //     },
-  //     formLabelWidth: "70px"
-  //   };
-  // },
-  // methods: {
-  //   close() {
-  //     this.dialogVisible = false;
-  //     //this.$emit("close", false);//要用回调来处理逻辑时，使用这个方法
-  //     this.$emit("update:flag", false);
-  //   }
-  // },
-  // //监听flag的变化
-  // watch: {
-  //   flag: {
-  //     handler(newValue, oldValue) {
-  //       this.dialogVisible = newValue;
-  //     }
-  //   }
-  // }
 };
 </script>
 <style lang="scss" scoped>

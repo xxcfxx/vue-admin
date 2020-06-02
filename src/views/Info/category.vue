@@ -9,7 +9,7 @@
             <div class="category" v-for="item in category.data" :key="item.id">
               <h4>
                 <svg-icon icon-class="minus" />
-                {{item.category_name}}---{{item.id}}
+                {{item.category_name}}
                 <div class="button-group">
                   <el-button
                     type="danger"
@@ -48,14 +48,14 @@
               <el-input v-model="form.categoryName" :disabled="isFirst"></el-input>
             </el-form-item>
             <el-form-item label="二级分类名称:" v-if="category_children" prop="secCategoryName">
-              <el-input v-model="form.secCategoryName" :disabled="isFirst"></el-input>
+              <el-input v-model="form.secCategoryName" :disabled="isChild"></el-input>
             </el-form-item>
             <el-form-item>
               <el-button
                 type="danger"
                 @click="submit"
                 :loading="submit_loading"
-                :disabled="isFirst"
+                :disabled="isSubmit"
               >确定</el-button>
             </el-form-item>
           </el-form>
@@ -79,10 +79,12 @@ export default {
   name: "category",
   setup(props, { root, refs }) {
     const { confirm } = global(); //申明global_V3.0中的常量、方法
-    const { getCategoryInfo, categoryData } = common();
-    const isFirst = ref(true);
-    const category_first = ref(true);
-    const category_children = ref(true);
+    const { getCategoryInfo, getCategoryInfoAll, categoryData } = common();
+    const isFirst = ref(true); //是否为一级分类
+    const isChild = ref(true);
+    const isSubmit = ref(true);
+    const category_first = ref(true); //一级分类
+    const category_children = ref(true); //二级分类
     const submit_loading = ref(false);
     const submit_type = ref("");
     const form = reactive({
@@ -109,7 +111,7 @@ export default {
             const data = response.data;
             if (data.resCode === 0) {
               root.$message({ message: data.message, type: "success" });
-              getCategoryInfo();
+              getCategoryInfoAll();
             }
             submit_loading.value = false;
             resetForm("categoryForm");
@@ -129,7 +131,7 @@ export default {
             const data = response.data;
             if (data.resCode === 0) {
               root.$message({ message: data.message, type: "success" });
-              getCategoryInfo();
+              getCategoryInfoAll();
             }
             submit_loading.value = false;
             resetForm("categoryForm");
@@ -138,10 +140,15 @@ export default {
             submit_loading.value = false;
           });
       } else if (submit_type.value == "category_child_add") {
-        console.log(submit_type.value);
+        if (!form.secCategoryName) {
+          root.$message({
+            type: "error",
+            message: "子级分类名称不能为空!"
+          });
+          return fasle;
+        }
         const requestData = {
-          categoryName: form.categoryName,
-          secCategoryName: form.secCategoryName,
+          categoryName: form.secCategoryName,
           parentId: form.categoryId
         };
         AddChildrenCategory(requestData)
@@ -150,10 +157,10 @@ export default {
             const data = response.data;
             if (data.resCode === 0) {
               root.$message({ message: data.message, type: "success" });
-              getCategoryInfo();
+              getCategoryInfoAll();
             }
             submit_loading.value = false;
-            resetForm("categoryForm");
+            form.secCategoryName = "";
           })
           .catch(error => {
             submit_loading.value = false;
@@ -177,7 +184,7 @@ export default {
           const data = response.data;
           console.log(data);
           if (data.resCode === 0) {
-            getCategoryInfo();
+            getCategoryInfoAll();
           }
         })
         .catch(error => {});
@@ -200,13 +207,17 @@ export default {
       submit_type.value = params.type;
       category_children.value = false;
       isFirst.value = false;
+      isChild.value = true;
+      isSubmit.value = false;
       resetForm("categoryForm");
     };
     /**打开添加子级分类 */
     const addChildren = params => {
       submit_type.value = params.type;
       category_children.value = true;
-      isFirst.value = false;
+      isFirst.value = true;
+      isChild.value = false;
+      isSubmit.value = false;
       category.current = params.category;
       form.categoryName = category.current.category_name;
       form.categoryId = category.current.id;
@@ -216,6 +227,7 @@ export default {
       submit_type.value = params.type;
       category_children.value = false;
       isFirst.value = false;
+      isSubmit.value = false;
       category.current = params.category;
       form.categoryName = category.current.category_name;
       form.categoryId = category.current.id;
@@ -225,7 +237,7 @@ export default {
      */
     //挂载完成时执行（页面DOM元素完成时，实例完成）
     onMounted(() => {
-      getCategoryInfo();
+      getCategoryInfoAll();
     });
     watch(
       () => categoryData.item,
@@ -236,6 +248,8 @@ export default {
     return {
       //ref
       isFirst,
+      isChild,
+      isSubmit,
       category_first,
       category_children,
       submit_loading,

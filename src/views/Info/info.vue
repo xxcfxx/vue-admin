@@ -6,7 +6,7 @@
           <div class="label-wrap categpry">
             <label>分类:</label>
             <div class="wrap-content">
-              <el-select v-model="categoryValue" placeholder="类型" style="width:100%">
+              <el-select v-model="categoryValue" placeholder="请选择" style="width:100%">
                 <el-option
                   v-for="item in category.item"
                   :key="item.id"
@@ -27,6 +27,8 @@
               <el-date-picker
                 style="width:100%"
                 v-model="dateValue"
+                format="yyyy年MM月dd日"
+                value-format="yyyy-MM-dd HH:mm:ss"
                 type="datetimerange"
                 align="right"
                 start-placeholder="开始日期"
@@ -55,7 +57,7 @@
           <el-input v-model="skeyWord" placeholder="请输入内容" style="width:100%"></el-input>
         </el-col>
         <el-col :span="5">
-          <el-button type="danger">搜索</el-button>
+          <el-button type="danger" @click="search">搜索</el-button>
         </el-col>
         <el-col :span="2">
           <el-button type="danger" class="pull-right" @click="dialogVisible=true">新建</el-button>
@@ -64,16 +66,22 @@
     </el-form>
     <div class="black-space-30"></div>
     <!--表格-->
-    <el-table :data="tableData.item" border v-loading="table_loading" style="width: 100%;">
+    <el-table
+      :data="tableData.item"
+      border
+      v-loading="table_loading"
+      @selection-change="handleSelectionChange"
+      style="width: 100%;"
+    >
       <el-table-column type="selection" width="55"></el-table-column>
       <el-table-column prop="title" label="标题" width="830"></el-table-column>
-      <el-table-column prop="type" label="类型" width="130"></el-table-column>
-      <el-table-column prop="date" label="日期" width="237"></el-table-column>
+      <el-table-column prop="type" label="类型" width="130" :formatter="toCategory"></el-table-column>
+      <el-table-column prop="date" label="日期" width="237" :formatter="toDate"></el-table-column>
       <el-table-column prop="user" label="管理员" width="115"></el-table-column>
       <el-table-column prop="操作" label="操作">
         <template slot-scope="scope">
-          <el-button type="danger" size="mini" @click="deleteItem">删除</el-button>
-          <el-button type="success" size="mini" @click="dialogVisible=true">编辑</el-button>
+          <el-button type="danger" size="mini" @click="deleteItem(scope.row.id)">删除</el-button>
+          <el-button type="success" size="mini" @click="editInfoDialog(scope.row.id)">编辑</el-button>
         </template>
       </el-table-column>
     </el-table>
@@ -99,29 +107,42 @@
         </div>
       </el-col>
     </el-row>
+    <!-- 信息添加弹框-->
     <DialogInfo
       :flag.sync="dialogVisible"
       :category="category.item"
       :pageSize="page.pageSize"
       :pageNumber="page.pageNumber"
+      @getList="getCategoryList"
+    />
+    <!-- 信息修改弹框-->
+    <DialogEditInfo
+      :flag.sync="dialog_editVisible"
+      :category="category.item"
+      :infoId="infoId"
+      @getList="getCategoryList"
     />
   </div>
 </template>
 <script>
 import DialogInfo from "./dialog/info";
+import DialogEditInfo from "./dialog/edit";
 import { GetCategory, GetInfoList, EditInfo, DeleteInfo } from "@/api/news";
 import { global } from "@/utils/global_V3.0";
 import { common } from "@/api/common";
+import { timestampToTime } from "@/utils/common";
 import { reactive, ref, watch, onMounted } from "@vue/composition-api";
 import "../../styles/config.scss";
 export default {
   name: "info",
-  components: { DialogInfo },
+  components: { DialogInfo, DialogEditInfo },
   setup(props, { root }) {
     const { str, confirm } = global(); //申明global_V3.0中的常量、方法
     const { getCategoryInfo, categoryData } = common();
+    const infoId = ref("");
     const table_loading = ref(true);
     const dialogVisible = ref(false); //true,false
+    const dialog_editVisible = ref(false); //true,false
     const categoryValue = ref(""); //类型
     const dateValue = ref(""); //日期
     const searchKey = ref("id"); //关键字
@@ -130,6 +151,9 @@ export default {
     const category = reactive({
       item: []
     });
+    const multipleSelection = reactive({
+      data: []
+    });
     const searchOptions = reactive([
       { value: "id", label: "ID" },
       { value: "title", label: "标题" }
@@ -137,11 +161,13 @@ export default {
     const tableData = reactive({
       item: []
     });
+    const deleteId = ref("");
 
     const page = reactive({
       pageNumber: 1,
       pageSize: 10
     });
+
     const handleSizeChange = val => {
       console.log(`每页 ${val} 条`);
       page.pageSize = val;
@@ -152,39 +178,78 @@ export default {
       page.pageNumber = val;
       getCategoryList();
     };
-
-    const deleteItem = () => {
+    const handleSelectionChange = val => {
+      let id = val.map(item => item.id);
+      deleteId.value = id;
+    };
+    const toDate = (row, column, cellValue, index) => {
+      return timestampToTime(row.createDate);
+    };
+    const toCategory = (row, column, cellValue, index) => {
+      let categoryId = row.categoryId;
+      let categoryName = category.item.filter(
+        item => item.id == row.categoryId
+      )[0];
+      return categoryName.category_name;
+    };
+    const deleteItem = value => {
+      deleteId.value = [value];
       confirm({
         content: "此操作将永久删除该文件, 是否继续?",
         tip: "警告",
-        fn: confirmDelete,
-        id: "111"
+        fn: confirmDelete
       });
     };
-
     const deleteAll = () => {
+      if (!deleteId.value || deleteId.value.lenght == 0) {
+        root.$message({
+          type: "error",
+          message: "请先选择要删除的数据!"
+        });
+        return false;
+      }
       confirm({
         content: "此操作将永久删除选中文件, 是否继续?",
         tip: "警告",
-        fn: confirmDelete,
-        id: "123"
+        fn: confirmDelete
       });
     };
-
     const confirmDelete = value => {
-      console.log("删除删除" + value);
+      DeleteInfo({ id: deleteId.value })
+        .then(response => {
+          getCategoryList();
+          deleteId.value = "";
+        })
+        .catch(error => {});
     };
-
-    const getCategoryList = () => {
-      const requestData = {
-        categoryId: "",
-        startTiem: "",
-        endTime: "",
-        title: "",
-        id: "",
+    const search = () => {
+      // console.log(categoryValue.value);
+      // console.log(dateValue.value);
+      // console.log(searchKey.value);
+      // console.log(skeyWord.value);
+      let requestData = formatData();
+      console.log(requestData);
+      getCategoryList();
+    };
+    const formatData = () => {
+      let requestData = {
         pageNumber: page.pageNumber,
         pageSize: page.pageSize
       };
+      //信息分类
+      if (categoryValue.value) {
+        requestData.categoryId = categoryValue.value;
+      }
+      //日期
+      if (dateValue.value) {
+        requestData.startTiem = dateValue.value[0];
+        requestData.endTime = dateValue.value[1];
+      }
+      requestData[searchKey.value] = skeyWord.value;
+      return requestData;
+    };
+    const getCategoryList = () => {
+      const requestData = formatData();
       GetInfoList(requestData)
         .then(response => {
           const infoList = response.data.data.data;
@@ -196,6 +261,11 @@ export default {
         .catch(error => {
           table_loading.value = false;
         });
+    };
+
+    const editInfoDialog = id => {
+      dialog_editVisible.value = true;
+      infoId.value = id;
     };
     /**
     生命周期
@@ -213,7 +283,9 @@ export default {
     ); //监听category变化时调用
     return {
       //基础数据ref
+      infoId,
       dialogVisible,
+      dialog_editVisible,
       categoryValue,
       dateValue,
       searchKey,
@@ -224,13 +296,20 @@ export default {
       category,
       searchOptions,
       tableData,
+      deleteId,
       page,
+      multipleSelection,
       //方法
+      search,
       handleSizeChange,
       handleCurrentChange,
+      handleSelectionChange,
+      toDate,
+      toCategory,
       deleteItem,
       deleteAll,
-      getCategoryList
+      getCategoryList,
+      editInfoDialog
     };
   }
 };
