@@ -221,11 +221,11 @@ export default {
       GetSms(requestData)
         .then(response => {
           let data = response.data;
-          console.log(response);
           root.$message({
             message: data.message,
             type: "success"
           });
+          ruleForm.code = data.message.substring(11, 18);
           //定时器
           countDown(5);
           loginButtonStatus.value = false;

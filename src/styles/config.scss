@@ -15,3 +15,15 @@ $layoutHeader:75px;
   -ms-#{$type}:$value;
   #{$type}:$value;
 }
+
+@mixin labelDom($align,$width,$line-height:"normal") {
+   label {
+    float: left;
+    text-align: center;
+    width: $width+px;
+    line-height: $line-height+px;
+  }
+  .wrap-content {
+    margin-left: $width+px;
+  }
+}

@@ -8,7 +8,6 @@ router.beforeEach((to, from, next) => {
     //进行路由跳转的时候，就会触发beforeEach
     if (getToken()) {
         //路由动态添加，分配菜单，每个角色分配不同的菜单
-        console.log('存在');
         if (to.path == "/login") {
             removeToken();
             removeUserName();
