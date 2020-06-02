@@ -82,6 +82,7 @@
         <template slot-scope="scope">
           <el-button type="danger" size="mini" @click="deleteItem(scope.row.id)">删除</el-button>
           <el-button type="success" size="mini" @click="editInfoDialog(scope.row.id)">编辑</el-button>
+          <el-button type="success" size="mini" @click="editInfoDialog(scope.row.id)">编辑详情</el-button>
         </template>
       </el-table-column>
     </el-table>
@@ -223,10 +224,6 @@ export default {
         .catch(error => {});
     };
     const search = () => {
-      // console.log(categoryValue.value);
-      // console.log(dateValue.value);
-      // console.log(searchKey.value);
-      // console.log(skeyWord.value);
       let requestData = formatData();
       console.log(requestData);
       getCategoryList();
