@@ -72,8 +72,8 @@ module.exports = {
     hotOnly: false,
     proxy: {
       "/devApi": {
-        //target: "http://www.web-jshtml.cn/dependenciesapi",
-        target: "http://www.web-jshtml.cn/productapi/token",
+        target: "http://www.web-jshtml.cn/dependenciesapi/token",
+        //target: "http://www.web-jshtml.cn/productapi/token",
         changeOrigin: true,
         pathRewrite: {
           "^/devApi": ""

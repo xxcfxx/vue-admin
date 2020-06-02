@@ -4,13 +4,13 @@
       <el-row :gutter="16">
         <el-col :span="4">
           <div class="label-wrap categpry">
-            <label>类型:</label>
+            <label>分类:</label>
             <div class="wrap-content">
               <el-select v-model="categoryValue" placeholder="类型" style="width:100%">
                 <el-option
-                  v-for="item in options"
+                  v-for="item in category.item"
                   :key="item.id"
-                  :label="item.label"
+                  :label="item.category_name"
                   :value="item.id"
                 ></el-option>
               </el-select>
@@ -64,7 +64,7 @@
     </el-form>
     <div class="black-space-30"></div>
     <!--表格-->
-    <el-table :data="tableData" border style="width: 100%;">
+    <el-table :data="tableData.item" border v-loading="table_loading" style="width: 100%;">
       <el-table-column type="selection" width="55"></el-table-column>
       <el-table-column prop="title" label="标题" width="830"></el-table-column>
       <el-table-column prop="type" label="类型" width="130"></el-table-column>
@@ -90,77 +90,69 @@
             background
             @size-change="handleSizeChange"
             @current-change="handleCurrentChange"
-            :current-page="1"
+            :current-page="page.pageNumber"
             :page-sizes="[10, 20, 50, 100]"
-            :page-size="10"
+            :page-size="page.pageSize"
             layout="total, sizes, prev, pager, next, jumper"
-            :total="1000"
+            :total="total"
           ></el-pagination>
         </div>
       </el-col>
     </el-row>
-
-    <DialogInfo :flag.sync="dialogVisible" />
+    <DialogInfo
+      :flag.sync="dialogVisible"
+      :category="category.item"
+      :pageSize="page.pageSize"
+      :pageNumber="page.pageNumber"
+    />
   </div>
 </template>
 <script>
 import DialogInfo from "./dialog/info";
+import { GetCategory, GetInfoList, EditInfo, DeleteInfo } from "@/api/news";
 import { global } from "@/utils/global_V3.0";
-import { reactive, ref, watch } from "@vue/composition-api";
+import { common } from "@/api/common";
+import { reactive, ref, watch, onMounted } from "@vue/composition-api";
 import "../../styles/config.scss";
 export default {
   name: "info",
   components: { DialogInfo },
   setup(props, { root }) {
     const { str, confirm } = global(); //申明global_V3.0中的常量、方法
-    watch(() => console.log(str.value)); //监听str变化时调用
+    const { getCategoryInfo, categoryData } = common();
+    const table_loading = ref(true);
     const dialogVisible = ref(false); //true,false
     const categoryValue = ref(""); //类型
     const dateValue = ref(""); //日期
     const searchKey = ref("id"); //关键字
     const skeyWord = ref(""); //搜索key内容
-    const options = reactive([
-      { value: 1, label: "国际信息" },
-      { value: 2, label: "国内信息" },
-      { value: 3, label: "行业信息" }
-    ]);
+    const total = ref(0);
+    const category = reactive({
+      item: []
+    });
     const searchOptions = reactive([
       { value: "id", label: "ID" },
       { value: "title", label: "标题" }
     ]);
-    const tableData = reactive([
-      {
-        title: "大受打击啊洛克菲勒卡是免费拉面师傅妈的",
-        type: "国内消息",
-        date: "2020-03-24",
-        user: "管理员"
-      },
-      {
-        title: "大受打击啊洛克菲勒卡是免费拉面师傅妈的",
-        type: "国内消息",
-        date: "2020-03-24",
-        user: "管理员"
-      },
-      {
-        title: "大受打击啊洛克菲勒卡是免费拉面师傅妈的",
-        type: "国内消息",
-        date: "2020-03-24",
-        user: "管理员"
-      },
-      {
-        title: "大受打击啊洛克菲勒卡是免费拉面师傅妈的",
-        type: "国内消息",
-        date: "2020-03-24",
-        user: "管理员"
-      }
-    ]);
+    const tableData = reactive({
+      item: []
+    });
 
+    const page = reactive({
+      pageNumber: 1,
+      pageSize: 10
+    });
     const handleSizeChange = val => {
       console.log(`每页 ${val} 条`);
+      page.pageSize = val;
+      getCategoryList();
     };
     const handleCurrentChange = val => {
       console.log(`当前页: ${val}`);
+      page.pageNumber = val;
+      getCategoryList();
     };
+
     const deleteItem = () => {
       confirm({
         content: "此操作将永久删除该文件, 是否继续?",
@@ -168,12 +160,6 @@ export default {
         fn: confirmDelete,
         id: "111"
       });
-      // root.confirm({
-      //   content: "此操作将永久删除该文件, 是否继续?",
-      //   tip: "警告",
-      //   fn: confirmDelete,
-      //   id: "111"
-      // });
     };
 
     const deleteAll = () => {
@@ -183,16 +169,48 @@ export default {
         fn: confirmDelete,
         id: "123"
       });
-      // root.confirm({
-      //   content: "此操作将永久删除选中文件, 是否继续?",
-      //   fn: confirmDelete,
-      //   id: "123"
-      // });
     };
 
     const confirmDelete = value => {
       console.log("删除删除" + value);
     };
+
+    const getCategoryList = () => {
+      const requestData = {
+        categoryId: "",
+        startTiem: "",
+        endTime: "",
+        title: "",
+        id: "",
+        pageNumber: page.pageNumber,
+        pageSize: page.pageSize
+      };
+      GetInfoList(requestData)
+        .then(response => {
+          const infoList = response.data.data.data;
+          tableData.item = infoList; //更新表数据
+          //更新页码
+          total.value = response.data.data.total;
+          table_loading.value = false;
+        })
+        .catch(error => {
+          table_loading.value = false;
+        });
+    };
+    /**
+    生命周期
+     */
+    //挂载完成时执行（页面DOM元素完成时，实例完成）
+    onMounted(() => {
+      getCategoryInfo();
+      getCategoryList();
+    });
+    watch(
+      () => categoryData.item,
+      value => {
+        category.item = value;
+      }
+    ); //监听category变化时调用
     return {
       //基础数据ref
       dialogVisible,
@@ -200,15 +218,19 @@ export default {
       dateValue,
       searchKey,
       skeyWord,
+      total,
+      table_loading,
       //对象数据reactive
-      options,
+      category,
       searchOptions,
       tableData,
+      page,
       //方法
       handleSizeChange,
       handleCurrentChange,
       deleteItem,
-      deleteAll
+      deleteAll,
+      getCategoryList
     };
   }
 };

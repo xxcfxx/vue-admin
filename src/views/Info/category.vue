@@ -73,11 +73,13 @@ import {
   EditCategory,
   DelCategory
 } from "@/api/news";
-import { reactive, ref, onMounted } from "@vue/composition-api";
+import { common } from "@/api/common";
+import { reactive, ref, onMounted, watch } from "@vue/composition-api";
 export default {
   name: "category",
   setup(props, { root, refs }) {
     const { confirm } = global(); //申明global_V3.0中的常量、方法
+    const { getCategoryInfo, categoryData } = common();
     const isFirst = ref(true);
     const category_first = ref(true);
     const category_children = ref(true);
@@ -107,7 +109,7 @@ export default {
             const data = response.data;
             if (data.resCode === 0) {
               root.$message({ message: data.message, type: "success" });
-              getCategory();
+              getCategoryInfo();
             }
             submit_loading.value = false;
             resetForm("categoryForm");
@@ -127,7 +129,7 @@ export default {
             const data = response.data;
             if (data.resCode === 0) {
               root.$message({ message: data.message, type: "success" });
-              getCategory();
+              getCategoryInfo();
             }
             submit_loading.value = false;
             resetForm("categoryForm");
@@ -139,14 +141,16 @@ export default {
         console.log(submit_type.value);
         const requestData = {
           categoryName: form.categoryName,
+          secCategoryName: form.secCategoryName,
           parentId: form.categoryId
         };
         AddChildrenCategory(requestData)
           .then(response => {
+            console.log(response);
             const data = response.data;
             if (data.resCode === 0) {
               root.$message({ message: data.message, type: "success" });
-              getCategory();
+              getCategoryInfo();
             }
             submit_loading.value = false;
             resetForm("categoryForm");
@@ -156,15 +160,7 @@ export default {
           });
       }
     };
-    /**获取分类列表 */
-    const getCategory = () => {
-      GetCategory({})
-        .then(response => {
-          //console.log(response.data.data.data);
-          category.data = response.data.data.data;
-        })
-        .catch(error => {});
-    };
+
     /**确认删除分类 */
     const confirmDelCategory = categoryId => {
       confirm({
@@ -179,8 +175,9 @@ export default {
       DelCategory({ categoryId: categoryId })
         .then(response => {
           const data = response.data;
+          console.log(data);
           if (data.resCode === 0) {
-            getCategory();
+            getCategoryInfo();
           }
         })
         .catch(error => {});
@@ -228,8 +225,14 @@ export default {
      */
     //挂载完成时执行（页面DOM元素完成时，实例完成）
     onMounted(() => {
-      getCategory();
+      getCategoryInfo();
     });
+    watch(
+      () => categoryData.item,
+      value => {
+        category.data = value;
+      }
+    ); //监听category变化时调用
     return {
       //ref
       isFirst,
