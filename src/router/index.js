@@ -50,7 +50,7 @@ const routes = [
     children: [{
       path: "/infoIndex",
       name: "InfoIndex",
-      component: () => import("../views/Info/info.vue"),
+      component: () => import("../views/Info/index.vue"),
       meta: {
         name: '信息列表'
       }
